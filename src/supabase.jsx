@@ -171,4 +171,16 @@ const supabase = {
   },
 };
 
+// Dev-helpers: ensure expected API exists in window.supabase
+// (prevents runtime "supabase.listTopics is not a function" / "createPost is not a function")
 window.supabase = supabase;
+if (!window.supabase) window.supabase = {};
+window.supabase.listTopics = window.supabase.listTopics || supabase.listTopics;
+window.supabase.listPosts  = window.supabase.listPosts  || supabase.listPosts;
+window.supabase.createPost = window.supabase.createPost || supabase.createPost;
+window.supabase.updatePost = window.supabase.updatePost || supabase.updatePost;
+window.supabase.deletePost = window.supabase.deletePost || supabase.deletePost;
+window.supabase.listComments = window.supabase.listComments || supabase.listComments;
+window.supabase.addComment = window.supabase.addComment || supabase.addComment;
+window.supabase.uploadImage = window.supabase.uploadImage || supabase.uploadImage;
+
