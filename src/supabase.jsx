@@ -11,15 +11,27 @@
 // A config.js .gitignore-ban van → a kulcsok nem kerülnek git-be.
 // ─────────────────────────────────────────────────────────────────────
 
-const { url: SUPABASE_URL, key: SUPABASE_KEY } = window.SUPABASE_CONFIG;
+const { url: SUPABASE_URL, key: SUPABASE_KEY } = window.SUPABASE_CONFIG || {};
 
 const _SupabaseLib = window.supabase; // save CDN library before overwriting the global
-let _sb;
-try {
-  _sb = _SupabaseLib.createClient(SUPABASE_URL, SUPABASE_KEY);
-} catch (e) {
-  console.error("Supabase createClient hiba:", e);
+let _sb = null;
+const HAS_SUPABASE_CONFIG = !!(SUPABASE_URL && SUPABASE_KEY);
+
+if (HAS_SUPABASE_CONFIG) {
+  try {
+    _sb = _SupabaseLib.createClient(SUPABASE_URL, SUPABASE_KEY);
+  } catch (e) {
+    console.error("Supabase createClient hiba:", e);
+  }
 }
+
+function requireSupabaseClient() {
+  if (!_sb) {
+    throw new Error("Hiányzó Supabase config: SUPABASE_URL / SUPABASE_ANON_KEY. (window.SUPABASE_CONFIG hiányos vagy nincs feltöltve)");
+  }
+  return _sb;
+}
+
 
 // A jelszó mezőt nem adjuk vissza normál lekérdezéseknél
 const SAFE_COLS = "id,title,excerpt,content,team_id,category,tags,image_url,pinned,read_min,author,created_at,updated_at";
@@ -57,6 +69,7 @@ const supabase = {
 
   // Bejegyzések lekérése (jelszó nélkül)
   async listPosts({ category = null, topicId = null, search = "" } = {}) {
+    const _sb = requireSupabaseClient();
     let query = _sb
       .from("posts")
       .select(SAFE_COLS)
@@ -83,6 +96,7 @@ const supabase = {
 
   // Új bejegyzés létrehozása (jelszó kötelező)
   async createPost(payload) {
+    const _sb = requireSupabaseClient();
     if (!payload.title?.trim() || !payload.team_id || !payload.category) {
       return { data: null, error: { message: "Cím, témakör és kategória megadása kötelező." } };
     }
@@ -102,6 +116,7 @@ const supabase = {
 
   // Jelszó ellenőrzése (szerkesztés/törlés előtt)
   async checkPassword(id, password) {
+    const _sb = requireSupabaseClient();
     const { data, error } = await _sb
       .from("posts")
       .select("id")
@@ -114,6 +129,7 @@ const supabase = {
 
   // Bejegyzés frissítése — jelszó szükséges
   async updatePost(id, password, patch) {
+    const _sb = requireSupabaseClient();
     const { error: authErr } = await this.checkPassword(id, password);
     if (authErr) return { data: null, error: authErr };
 
@@ -130,6 +146,7 @@ const supabase = {
 
   // Bejegyzés törlése — jelszó szükséges
   async deletePost(id, password) {
+    const _sb = requireSupabaseClient();
     const { error: authErr } = await this.checkPassword(id, password);
     if (authErr) return { data: null, error: authErr };
 
@@ -140,6 +157,7 @@ const supabase = {
 
   // Megjegyzések lekérése egy bejegyzéshez
   async listComments(postId) {
+    const _sb = requireSupabaseClient();
     const { data, error } = await _sb
       .from("post_comments")
       .select("*")
@@ -150,6 +168,7 @@ const supabase = {
 
   // Megjegyzés hozzáadása
   async addComment({ post_id, author, body }) {
+    const _sb = requireSupabaseClient();
     const { data, error } = await _sb
       .from("post_comments")
       .insert({ post_id, author, body })
@@ -160,6 +179,7 @@ const supabase = {
 
   // Kép feltöltése Supabase Storage-ba (bucket: "post-images", public)
   async uploadImage(file) {
+    const _sb = requireSupabaseClient();
     const ext = file.name.split(".").pop().toLowerCase();
     const name = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { data, error } = await _sb.storage
