@@ -93,12 +93,15 @@ function Composer({ open, onClose, onPublish, topics, editPost, editPassword }) 
       image: imageUrl ? { kind: "photo", label: imageUrl } : null,
     };
 
+    const sb = window.supabase;
+    if (!sb) throw new Error("window.supabase is missing");
+
     if (isEdit) {
-      const { data, error } = await supabase.updatePost(editPost.id, password, payload);
+      const { data, error } = await sb.updatePost(editPost.id, password, payload);
       if (error) { alert(error.message); return; }
       onPublish(data, true);
     } else {
-      const { data, error } = await supabase.createPost({ ...payload, password });
+      const { data, error } = await sb.createPost({ ...payload, password });
       if (error) { alert(error.message); return; }
       onPublish(data, false);
     }

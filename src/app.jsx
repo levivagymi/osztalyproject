@@ -20,9 +20,13 @@ function App() {
   // Kezdeti betöltés
   useEffectA(() => {
     (async () => {
+      const sb = window.supabase;
+      if (!sb) throw new Error("window.supabase is missing");
+      if (typeof sb.listTopics !== "function") throw new Error("window.supabase.listTopics is not a function");
+      if (typeof sb.listPosts !== "function") throw new Error("window.supabase.listPosts is not a function");
       const [{ data: ts }, { data: ps }] = await Promise.all([
-        supabase.listTopics(),
-        supabase.listPosts(),
+        sb.listTopics(),
+        sb.listPosts(),
       ]);
       setTopics(ts || []);
       setPosts(ps || []);
