@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Osztály · Projektmenedzsment tudásbázis</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+        serif: ['"Instrument Serif"', 'Georgia', 'serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+      },
+      colors: {
+        cream: '#FAF6EE',
+        creamdark: '#F1ECDF',
+        ink: '#13110F',
+        ink2: '#2A2620',
+        muted: '#7A7468',
+        line: '#E4DDC9',
+        violet: '#6B3FE6',
+        violetink: '#3F1FA8',
+        coral: '#F26A4B',
+        lime: '#C7E541',
+        sky: '#A3D1FF',
+      },
+    },
+  },
+};
+</script>
+
+<style>
+  html, body { background: #FAF6EE; color: #13110F; }
+  body { font-family: "Space Grotesk", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  .font-serif-i { font-family: "Instrument Serif", serif; font-style: italic; font-weight: 400; }
+  .grain { background-image: radial-gradient(rgba(19,17,15,0.04) 1px, transparent 1px); background-size: 3px 3px; }
+  .noise::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(19,17,15,0.05) 1px, transparent 1px);
+    background-size: 3px 3px; mix-blend-mode: multiply; opacity: 0.6;
+  }
+  .scroll-fade { opacity: 0; transform: translateY(24px); transition: opacity 700ms cubic-bezier(.2,.7,.2,1), transform 700ms cubic-bezier(.2,.7,.2,1); }
+  .scroll-fade.in { opacity: 1; transform: translateY(0); }
+  .ticker { animation: ticker 40s linear infinite; }
+  @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  .blob {
+    filter: blur(40px); opacity: .65;
+  }
+  .ring-ink { box-shadow: inset 0 0 0 1px #13110F; }
+  .ring-line { box-shadow: inset 0 0 0 1px #E4DDC9; }
+  .btn-press { transition: transform 120ms ease, box-shadow 120ms ease; }
+  .btn-press:active { transform: translateY(1px); }
+  .card-hover { transition: transform 350ms cubic-bezier(.2,.7,.2,1), box-shadow 350ms ease, background-color 350ms ease; }
+  .card-hover:hover { transform: translateY(-4px); }
+  .marquee-mask { mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+  .stripe-bg {
+    background-image: repeating-linear-gradient(45deg, rgba(19,17,15,0.06) 0 1px, transparent 1px 14px);
+  }
+  .hand-arrow { font-family: "Instrument Serif", serif; }
+  /* hide scrollbar inside compact areas */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+  /* underline link */
+  .ulink { background-image: linear-gradient(currentColor, currentColor); background-size: 100% 1px; background-repeat: no-repeat; background-position: 0 100%; }
+
+  /* form caret colour */
+  textarea, input { caret-color: #6B3FE6; }
+</style>
+
+<!-- Bundler thumbnail (for offline export) -->
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" fill="#FAF6EE"/>
+    <circle cx="36" cy="42" r="14" fill="#6B3FE6"/>
+    <rect x="52" y="34" width="22" height="22" fill="#F26A4B"/>
+    <text x="50" y="78" font-family="Georgia, serif" font-style="italic" font-size="14" text-anchor="middle" fill="#13110F">osztály</text>
+  </svg>
+</template>
+
+<!-- Speaker notes / data: none -->
+<script src="config.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+</head>
+<body class="min-h-screen">
+
+<div id="root"></div>
+
+<script type="text/babel" src="src/icons.jsx"></script>
+<script type="text/babel" src="src/data.jsx"></script>
+<script type="text/babel" src="src/supabase.jsx"></script>
+<script type="text/babel" src="src/parts.jsx"></script>
+<script type="text/babel" src="src/hero.jsx"></script>
+<script type="text/babel" src="src/teams.jsx"></script>
+<script type="text/babel" src="src/feed.jsx"></script>
+<script type="text/babel" src="src/composer.jsx"></script>
+<script type="text/babel" src="src/team_view.jsx"></script>
+<script type="text/babel" src="src/tutorial.jsx"></script>
+<script type="text/babel" src="src/app.jsx"></script>
+
+</body>
+</html>
