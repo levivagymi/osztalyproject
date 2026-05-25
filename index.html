@@ -90,12 +90,23 @@ tailwind.config = {
 <!-- Prefer Vercel-injected window.__ENV__.
      Fallback: config.js (local dev). -->
 <script>
-  try {
-    const env = window.__ENV__;
-    if (env && !window.SUPABASE_CONFIG) {
-      window.SUPABASE_CONFIG = { url: env.SUPABASE_URL, key: env.SUPABASE_ANON_KEY };
-    }
-  } catch (e) {}
+  // Static site (no framework): a Vercel env-eket egy /api/env endpointból töltjük.
+  // Local dev: fallback config.js (window.SUPABASE_CONFIG).
+  (async () => {
+    try {
+      if (!window.SUPABASE_CONFIG) {
+        const resp = await fetch('/api/env');
+        if (resp.ok) {
+          const env = await resp.json();
+          if (env && env.SUPABASE_URL && env.SUPABASE_ANON_KEY) {
+            window.SUPABASE_CONFIG = { url: env.SUPABASE_URL, key: env.SUPABASE_ANON_KEY };
+          }
+        }
+      }
+    } catch (e) {}
+
+    // if still missing, config.js should fill it (local dev)
+  })();
 </script>
 <!-- Local dev config fallback -->
 <script src="config.js"></script>
