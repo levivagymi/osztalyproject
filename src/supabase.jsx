@@ -13,7 +13,13 @@
 
 const { url: SUPABASE_URL, key: SUPABASE_KEY } = window.SUPABASE_CONFIG;
 
-const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const _SupabaseLib = window.supabase; // save CDN library before overwriting the global
+let _sb;
+try {
+  _sb = _SupabaseLib.createClient(SUPABASE_URL, SUPABASE_KEY);
+} catch (e) {
+  console.error("Supabase createClient hiba:", e);
+}
 
 // A jelszó mezőt nem adjuk vissza normál lekérdezéseknél
 const SAFE_COLS = "id,title,excerpt,content,team_id,category,tags,image_url,pinned,read_min,author,created_at,updated_at";
@@ -165,4 +171,4 @@ const supabase = {
   },
 };
 
-Object.assign(window, { supabase });
+window.supabase = supabase;
