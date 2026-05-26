@@ -125,6 +125,14 @@ create policy "post_images_delete" on storage.objects
 alter table public.posts add column if not exists password text;
 
 
+-- ── MIGRATION: forrás mezők ──────────────────────────────────────────
+-- Egy bejegyzéshez opcionálisan hozzárendelhető külső forrás (link + OG meta)
+alter table public.posts add column if not exists source_url         text;
+alter table public.posts add column if not exists source_title       text;
+alter table public.posts add column if not exists source_description text;
+alter table public.posts add column if not exists source_og_image    text;
+
+
 -- ── POST COMMENTS ────────────────────────────────────────────────────
 create table if not exists public.post_comments (
   id         uuid primary key default gen_random_uuid(),

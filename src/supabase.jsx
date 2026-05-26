@@ -37,7 +37,7 @@ async function requireSupabaseClient() {
 
 
 // A jelszó mezőt nem adjuk vissza normál lekérdezéseknél
-const SAFE_COLS = "id,title,excerpt,content,team_id,category,tags,image_url,pinned,read_min,author,created_at,updated_at";
+const SAFE_COLS = "id,title,excerpt,content,team_id,category,tags,image_url,pinned,read_min,author,created_at,updated_at,source_url,source_title,source_description,source_og_image";
 
 // DB → frontend mezőátalakítás
 function toFrontend(row) {
@@ -46,6 +46,12 @@ function toFrontend(row) {
     ...row,
     read:  row.read_min ?? 3,
     image: row.image_url ? { kind: "photo", label: row.image_url } : null,
+    source: row.source_url ? {
+      url:         row.source_url,
+      title:       row.source_title       || null,
+      description: row.source_description || null,
+      ogImage:     row.source_og_image    || null,
+    } : null,
   };
 }
 
@@ -53,14 +59,18 @@ function toFrontend(row) {
 function toDb(payload) {
   const wordCount = (payload.content || "").trim().split(/\s+/).filter(Boolean).length;
   return {
-    title:     payload.title?.trim(),
-    team_id:   payload.team_id,
-    category:  payload.category,
-    tags:      payload.tags   || [],
-    content:   payload.content || "",
-    excerpt:   payload.excerpt || "",
-    image_url: payload.image?.label || null,
-    read_min:  Math.max(1, Math.round(wordCount / 200)),
+    title:              payload.title?.trim(),
+    team_id:            payload.team_id,
+    category:           payload.category,
+    tags:               payload.tags   || [],
+    content:            payload.content || "",
+    excerpt:            payload.excerpt || "",
+    image_url:          payload.image?.label || null,
+    read_min:           Math.max(1, Math.round(wordCount / 200)),
+    source_url:         payload.source?.url         || null,
+    source_title:       payload.source?.title       || null,
+    source_description: payload.source?.description || null,
+    source_og_image:    payload.source?.ogImage     || null,
   };
 }
 

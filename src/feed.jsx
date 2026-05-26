@@ -2,26 +2,77 @@
 
 const { useEffect: useEffectF, useMemo: useMemoF, useState: useStateF, useRef: useRefF } = React;
 
-// Markdown → HTML
+// Markdown → HTML (block-alapú, táblázat + kép támogatással)
 function renderMarkdown(src) {
-  const esc = (s) => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  let s = esc(src);
-  s = s.replace(/^### (.*)$/gm, '<h3 style="font-weight:600;font-size:18px;margin:20px 0 6px">$1</h3>')
-       .replace(/^## (.*)$/gm,  '<h2 style="font-weight:600;font-size:21px;margin:28px 0 8px">$1</h2>')
-       .replace(/^# (.*)$/gm,   '<h1 style="font-weight:600;font-size:26px;margin:32px 0 10px">$1</h1>')
-       .replace(/^> (.*)$/gm,   '<blockquote style="padding-left:16px;border-left:2px solid #6B3FE6;font-style:italic;color:#2A2620">$1</blockquote>')
-       .replace(/^---$/gm,      '<hr style="border:none;border-top:1px solid #E4DDC9;margin:24px 0"/>')
-       .replace(/`([^`]+)`/g,   '<code style="font-family:JetBrains Mono,monospace;font-size:13px;background:#F1ECDF;padding:1px 5px;border-radius:4px">$1</code>')
-       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-       .replace(/\*([^*]+)\*/g,  '<em>$1</em>')
-       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#6B3FE6;text-decoration:underline">$1</a>');
-  s = s.replace(/(?:^|\n)((?:- .*(?:\n|$))+)/g, (_, block) =>
-    `\n<ul style="list-style:disc;padding-left:24px;margin:8px 0">${block.trim().split("\n").map(l => `<li style="margin:4px 0">${l.replace(/^- /, "")}</li>`).join("")}</ul>`);
-  s = s.replace(/(?:^|\n)((?:\d+\. .*(?:\n|$))+)/g, (_, block) =>
-    `\n<ol style="list-style:decimal;padding-left:24px;margin:8px 0">${block.trim().split("\n").map(l => `<li style="margin:4px 0">${l.replace(/^\d+\. /, "")}</li>`).join("")}</ol>`);
-  s = s.split(/\n{2,}/).map(p =>
-    /^<(h\d|ul|ol|blockquote|hr|pre)/.test(p) ? p : `<p style="margin:0">${p.replace(/\n/g, "<br/>")}</p>`).join("\n");
-  return s;
+  if (!src) return "";
+  const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const inline = raw => esc(raw)
+    .replace(/!\[\]\(([^)]+)\)/g, '<img src="$1" alt="" style="max-width:100%;border-radius:6px;margin:4px 0;display:block">')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#6B3FE6;text-decoration:underline">$1</a>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g,     '<em>$1</em>')
+    .replace(/`([^`]+)`/g,       '<code style="font-family:JetBrains Mono,monospace;font-size:13px;background:#F1ECDF;padding:1px 5px;border-radius:4px">$1</code>');
+  const parseTblRow = line => line.split('|').slice(1,-1).map(c => c.trim());
+  const isTblSep   = line => /^\|[\s\-:]+\|/.test(line.trim());
+  const TH = 'border:1px solid #E4DDC9;padding:8px 12px;text-align:left;background:#F1ECDF;font-weight:600;font-size:13px;white-space:nowrap';
+  const TD = 'border:1px solid #E4DDC9;padding:8px 12px;font-size:13px;vertical-align:top';
+
+  const out = [];
+  for (const raw of src.split(/\n{2,}/)) {
+    const block = raw.trim();
+    if (!block) continue;
+    const lines = block.split('\n');
+    const first = lines[0].trim();
+
+    // Raw HTML passthrough — any tag (covers mammoth output, avoids double-escaping entities)
+    if (/^<[a-zA-Z]/.test(first)) {
+      out.push(block);
+      continue;
+    }
+
+    const hm = first.match(/^(#{1,3})\s+(.*)/);
+    if (hm) {
+      const n = hm[1].length;
+      out.push(`<h${n} style="font-weight:600;font-size:${['26px','21px','18px'][n-1]};margin:${['32px 0 10px','28px 0 8px','20px 0 6px'][n-1]}">${inline(hm[2])}</h${n}>`);
+      continue;
+    }
+    if (/^---+$/.test(first)) { out.push('<hr style="border:none;border-top:1px solid #E4DDC9;margin:24px 0"/>'); continue; }
+    if (lines.every(l => /^>/.test(l.trim()))) {
+      out.push(`<blockquote style="padding-left:16px;border-left:2px solid #6B3FE6;font-style:italic;color:#2A2620;margin:12px 0">${
+        lines.map(l => inline(l.trim().replace(/^>\s?/,''))).join('<br/>')}</blockquote>`);
+      continue;
+    }
+    if (lines.length >= 2 && /^\|/.test(first) && isTblSep(lines[1]||'')) {
+      const headers = parseTblRow(lines[0]);
+      const bodyRows = lines.slice(2).filter(l => /^\|/.test(l.trim()));
+      const thead = `<thead><tr>${headers.map(h=>`<th style="${TH}">${inline(h)}</th>`).join('')}</tr></thead>`;
+      const tbody = bodyRows.length
+        ? `<tbody>${bodyRows.map(r => {
+            const cells = parseTblRow(r);
+            while (cells.length < headers.length) cells.push('');
+            return `<tr>${cells.slice(0,headers.length).map(c=>`<td style="${TD}">${inline(c)}</td>`).join('')}</tr>`;
+          }).join('')}</tbody>`
+        : '';
+      out.push(`<div style="overflow-x:auto;margin:1.25rem 0"><table style="width:100%;border-collapse:collapse;line-height:1.5">${thead}${tbody}</table></div>`);
+      continue;
+    }
+    if (lines.length === 1 && /^!\[\]\([^)]+\)$/.test(first)) {
+      out.push(`<img src="${first.match(/!\[\]\(([^)]+)\)/)[1]}" alt="kép" style="max-width:100%;border-radius:8px;margin:1rem 0;display:block">`);
+      continue;
+    }
+    if (lines.every(l => /^[-•]\s/.test(l.trim()))) {
+      out.push(`<ul style="list-style:disc;padding-left:24px;margin:8px 0">${
+        lines.map(l=>`<li style="margin:4px 0">${inline(l.trim().replace(/^[-•]\s+/,''))}</li>`).join('')}</ul>`);
+      continue;
+    }
+    if (lines.every(l => /^\d+[.)]\s/.test(l.trim()))) {
+      out.push(`<ol style="list-style:decimal;padding-left:24px;margin:8px 0">${
+        lines.map(l=>`<li style="margin:4px 0">${inline(l.trim().replace(/^\d+[.)]\s+/,''))}</li>`).join('')}</ol>`);
+      continue;
+    }
+    out.push(`<p style="margin:0.75em 0;line-height:1.7">${lines.map(l=>inline(l)).join('<br/>')}</p>`);
+  }
+  return out.join('\n');
 }
 
 function BlogFeed({ posts, topics, filterCat, filterTeam, onClearFilters, onOpenPost, search, filterSaved, savedPostIds, onToggleFilterSaved }) {
@@ -310,6 +361,13 @@ function PostOverlay({ post, topic, onClose, savedPostIds, onToggleSave, onEdit,
             )}
           </div>
 
+          {post.source?.url && (
+            <div className="mt-10">
+              <h4 className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted mb-3">Forrás</h4>
+              <SourceCard source={post.source} />
+            </div>
+          )}
+
           <footer className="mt-12 pt-6 border-t border-line flex flex-wrap gap-3 items-center justify-between">
             {/* szerkesztés / törlés */}
             <div className="flex items-center gap-2">
@@ -499,6 +557,37 @@ function CommentsModal({ postId, onClose }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Forrás link-kártya (OG preview) ──────────────────────────────────
+function SourceCard({ source }) {
+  const domain = (() => {
+    try { return new URL(source.url).hostname.replace("www.", ""); }
+    catch { return source.url; }
+  })();
+  return (
+    <a href={source.url} target="_blank" rel="noopener noreferrer"
+      className="group flex gap-4 rounded-xl ring-line bg-creamdark hover:bg-cream transition-colors overflow-hidden no-underline">
+      {source.ogImage && (
+        <img
+          src={source.ogImage}
+          alt=""
+          className="flex-shrink-0 w-28 h-20 object-cover"
+        />
+      )}
+      <div className="min-w-0 flex flex-col justify-center gap-1 py-3 pr-4" style={{ paddingLeft: source.ogImage ? 0 : "1rem" }}>
+        <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted">{domain}</span>
+        {source.title && (
+          <span className="text-[14px] font-medium leading-snug line-clamp-2 text-ink group-hover:text-violetink transition-colors">
+            {source.title}
+          </span>
+        )}
+        {source.description && (
+          <span className="text-[12px] text-ink2 line-clamp-2 leading-snug">{source.description}</span>
+        )}
+      </div>
+    </a>
   );
 }
 

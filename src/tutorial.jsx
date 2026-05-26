@@ -2,14 +2,14 @@
 
 const { useState: useStateT, useEffect: useEffectT } = React;
 
-const TUTORIAL_KEY = "ok:tutorial:v3";
+const TUTORIAL_KEY = "ok:tutorial:v4";
 
 const STEPS = [
   {
     icon: "sparkles",
     color: "#6B3FE6",
     bg: "#EFE7FF",
-    eyebrow: "üdvözlet · 1 / 12",
+    eyebrow: "üdvözlet · 1 / 14",
     title: "Üdvözöl az Osztály!",
     body: "Ez a 12.i osztály projektmenedzsment tudásbázisa. 9 csapat dolgozik egy-egy témán, és itt osztják meg kutatásaikat, vázlataikat és összefoglalóikat. Ez a 12 lépéses bemutató segít eligazodni — bármikor visszahívható a fejléc '?' gombjával.",
     tip: "Az oldalon minden bejegyzés jelszóval védett, így csak a szerzők módosíthatják őket.",
@@ -19,7 +19,7 @@ const STEPS = [
     icon: "layout-grid",
     color: "#F26A4B",
     bg: "#FFE4DC",
-    eyebrow: "témakörök · 2 / 12",
+    eyebrow: "témakörök · 2 / 14",
     title: "A 9 témakör-kártya",
     body: "A kezdőlapon 9 kártya mutatja a csapatokat. Minden kártyán látható a csapat neve, fókusza, a tagok száma és az aktuális bejegyzésszám. Kattints bármelyikre a csapat részletes oldalának megnyitásához.",
     tip: "Görgess le a kezdőlapon a kártyák megtekintéséhez — az első szekció a témakörök.",
@@ -29,7 +29,7 @@ const STEPS = [
     icon: "users",
     color: "#1B4B8F",
     bg: "#DCE9FB",
-    eyebrow: "csapat oldal · 3 / 12",
+    eyebrow: "csapat oldal · 3 / 14",
     title: "Csapat részletes oldal",
     body: "Minden csapatnak saját aloldala van. Itt megtalálod: a tagok nevét, az altémák listáját, a felhasznált szoftvereket és a csapat összes bejegyzését. Vissza gombbal visszatérhetsz a főoldalra.",
     tip: "A csapat jelvénye (színes kör az emojival) mindenhol megjelenik — a kártyákon, a feedben és a bejegyzésekben is.",
@@ -39,7 +39,7 @@ const STEPS = [
     icon: "circle-dot",
     color: "#0E5C5F",
     bg: "#DCEEEF",
-    eyebrow: "tudásfelhő · 4 / 12",
+    eyebrow: "tudásfelhő · 4 / 14",
     title: "Kategória-szűrő",
     body: "A Tudásfelhő 6 buborékja 6 tartalomtípust képvisel: Kutatás, Design, Kódolás, Prezentáció, Terepgyakorlat és Írás. Kattints egy buborékra — a feed azonnal szűr. A szűrőt a 'törlés' gombbal törölheted.",
     tip: "Egyszerre csak egy kategória aktív, de a témakör-szűrővel kombinálható.",
@@ -49,7 +49,7 @@ const STEPS = [
     icon: "newspaper",
     color: "#3F5C12",
     bg: "#E7F2DC",
-    eyebrow: "feed + keresés · 5 / 12",
+    eyebrow: "feed + keresés · 5 / 14",
     title: "Bejegyzések böngészése",
     body: "A feed fordított időrendben mutatja az összes bejegyzést. Az első mindig kiemelt kártyaként jelenik meg. A fejléc keresőjébe gépelve valós időben szűrsz cím és összefoglaló szerint. A 'Mentett bejegyzések' gombbal csak a könyvjelzőzött cikkek jelennek meg.",
     tip: "A kártyán látod a kategória chippet, a dátumot, az olvasási időt és a csapat jelvényét.",
@@ -62,7 +62,7 @@ const STEPS = [
     icon: "plus-circle",
     color: "#7B1F61",
     bg: "#F6E3F0",
-    eyebrow: "új bejegyzés · 6 / 12",
+    eyebrow: "új bejegyzés · 6 / 14",
     title: "Hogyan indíts bejegyzést?",
     body: "Az 'Új bejegyzés' gomb a fejléc jobb felső sarkában található — sötét háttérrel, könnyen megtalálható. Kattints rá: megnyílik a szerkesztő panel. Bárki írhat bejegyzést, nincs bejelentkezési követelmény. Az elkészült cikkek, kutatási jegyzetek és összefoglalók így kerülnek fel az osztály közös tudásbázisába.",
     tip: "A fejléc rögzített marad görgetés közben is — az 'Új bejegyzés' gomb mindig elérhető az oldal tetején.",
@@ -72,7 +72,7 @@ const STEPS = [
     icon: "list",
     color: "#7B1F61",
     bg: "#F6E3F0",
-    eyebrow: "alap adatok · 7 / 12",
+    eyebrow: "alap adatok · 7 / 14",
     title: "Cím, témakör és kategória",
     body: "A szerkesztőben három mező kötelező — nélkülük a bejegyzés nem tehető közzé:",
     bullets: [
@@ -87,23 +87,57 @@ const STEPS = [
     icon: "file-text",
     color: "#6B4A00",
     bg: "#FFEEBB",
-    eyebrow: "tartalom írása · 8 / 12",
-    title: "Tartalom Markdown-ban",
-    body: "A hosszabb tartalmat a szövegmezőbe írd Markdown jelöléssel. Nem kell mindent tudni — ezek elégek a legtöbb esethez:",
+    eyebrow: "tartalom írása · 8 / 14",
+    title: "Tartalom és formázás",
+    body: "A szövegmezőbe írhatod a tartalmat, és az eszköztár gombjaival formázhatsz — nem kell Markdown szintaxist memorizálni. A gombok a szövegmező felett találhatók:",
     bullets: [
-      { icon: "hash", color: "#6B4A00", text: "# Nagy cím     ## Alcím     ### Kisebb alcím" },
-      { icon: "bold", color: "#6B4A00", text: "**félkövér**   és   *dőlt* szöveg" },
-      { icon: "list", color: "#6B4A00", text: "- Felsorolás pont   1. Számozott lista elem" },
-      { icon: "code", color: "#6B4A00", text: "`kódrészlet`   és   > idézet (blockquote)" },
+      { icon: "heading-1", color: "#6B4A00", text: "H1 / H2 — nagy cím és alcím beillesztése (# vagy ##)" },
+      { icon: "bold",      color: "#6B4A00", text: "Félkövér (**szöveg**) és Dőlt (*szöveg*) formázás" },
+      { icon: "list",      color: "#6B4A00", text: "Felsorolás (- pont) és Számozott lista (1. elem)" },
+      { icon: "code",      color: "#6B4A00", text: "Kódrészlet (`kód`) és Idézet (> blockquote)" },
+      { icon: "link",      color: "#6B4A00", text: "Link beillesztése és --- vízszintes elválasztó" },
     ],
-    tip: "Ha a tartalom mező üres, csak az összefoglaló jelenik meg a feedben. Hosszabb cikkeknél töltsd ki.",
+    tip: "Jelölj ki szöveget, majd kattints egy eszköztár gombra — a formázás automatikusan a kijelölés köré kerül.",
     demo: "composerMarkdown",
+  },
+  {
+    icon: "file-text",
+    color: "#3F5C12",
+    bg: "#E7F2DC",
+    eyebrow: "docx importálás · 9 / 14",
+    title: "DOCX fájl importálása",
+    body: "Ha a szöveget már megírtad Word-ben (.docx), nem kell újra begépelni — töltsd fel közvetlenül a szerkesztőből. A rendszer automatikusan kinyeri a címet és a teljes tartalmat.",
+    bullets: [
+      { icon: "file-text",  color: "#3F5C12", text: "Kattints a 'DOCX betöltése' gombra a jobb oldali panelen" },
+      { icon: "upload",     color: "#3F5C12", text: "Válaszd ki a .docx fájlt a számítógépedről (max. ~10 MB)" },
+      { icon: "type",       color: "#3F5C12", text: "Ha a dokumentum első sora H1 cím, a cím mező automatikusan kitöltődik" },
+      { icon: "align-left", color: "#3F5C12", text: "A tartalom HTML formátumban kerül be — a táblázatok és listák is megőrződnek" },
+    ],
+    warning: "⚠ A meglévő tartalmat felülírja az importálás! Ha már van szöveg a mezőben, előbb mentsd el.",
+    tip: "A cím csak akkor töltődik ki, ha a cím mező üres volt — a meglévő titelt nem írja felül.",
+    demo: "composerDocx",
+  },
+  {
+    icon: "link",
+    color: "#1B4B8F",
+    bg: "#DCE9FB",
+    eyebrow: "forrás hozzáadása · 10 / 14",
+    title: "Forrás linkelése",
+    body: "Ha a bejegyzés egy külső cikken, tanulmányon vagy weboldalon alapul, linkeld be a forrást. A rendszer automatikusan lekéri az oldal előnézeti adatait, és egy kártyaként jeleníti meg a bejegyzés alatt.",
+    bullets: [
+      { icon: "link",       color: "#1B4B8F", text: "Illeszd be a forrás URL-jét a 'Forrás hozzáadása' mezőbe (https://…)" },
+      { icon: "search",     color: "#1B4B8F", text: "Nyomj Entert vagy kattints a 'Lekérés' gombra — az oldal OG-adatait olvassa be" },
+      { icon: "image",      color: "#1B4B8F", text: "Megjelenik az előnézeti kártya: kép, cím, leírás és a domain neve" },
+      { icon: "x",          color: "#1B4B8F", text: "A 'Forrás eltávolítása' gombbal bármikor törölhető a beállított forrás" },
+    ],
+    tip: "Ha az oldal nem támogatja az OG meta-adatokat, előfordulhat, hogy a kép vagy leírás hiányzik az előnézetből.",
+    demo: "composerSource",
   },
   {
     icon: "image",
     color: "#0E5C5F",
     bg: "#DCEEEF",
-    eyebrow: "kép hozzáadása · 9 / 12",
+    eyebrow: "kép hozzáadása · 11 / 14",
     title: "Kiemelt kép hozzáadása",
     body: "A jobb oldali panelen adhatsz kiemelt képet — megjelenik a feed-kártyán és az overlay tetején is. Kétféleképpen adható meg:",
     bullets: [
@@ -117,7 +151,7 @@ const STEPS = [
     icon: "lock",
     color: "#13110F",
     bg: "#E8E4DC",
-    eyebrow: "jelszó + közzétevés · 10 / 12",
+    eyebrow: "jelszó + közzétevés · 12 / 14",
     title: "Jelszó és közzétevés",
     body: "Mielőtt közzéteszed, adj meg egy jelszót. Ez nem a te fiókod jelszava — egy egyedi kód, amit te találsz ki, és a rendszer eltárol a bejegyzésnél. Erre lesz szükség, ha később szerkeszteni vagy törölni akarod a bejegyzést. Ha minden kész, kattints a 'Közzétesz' gombra — a bejegyzés azonnal megjelenik a feedben.",
     warning: "⚠ A jelszót nem lehet visszaállítani! Ha elveszíted, a bejegyzést nem tudod módosítani vagy törölni. Írj fel biztonságos helyre.",
@@ -131,7 +165,7 @@ const STEPS = [
     icon: "book-open",
     color: "#6B4A00",
     bg: "#FFEEBB",
-    eyebrow: "bejegyzés olvasás · 11 / 12",
+    eyebrow: "bejegyzés olvasás · 13 / 14",
     title: "Bejegyzés megnyitása",
     body: "Kattints bármely kártyára az overlay megnyitásához. Láthatod a teljes szöveget, a csapat adatait és az összes metaadatot. Az overlay fejlécén a kategória chip a tudásfelhő szűrőre is vonatkozik. Bezárás: X gomb, háttérre kattintás, vagy Esc billentyű.",
     tip: "Ha a bejegyzésnek van kiemelt képe (URL vagy feltöltött), az az overlay tetején jelenik meg.",
@@ -141,7 +175,7 @@ const STEPS = [
     icon: "shield-check",
     color: "#13110F",
     bg: "#E8E4DC",
-    eyebrow: "bejegyzés eszközök · 12 / 12",
+    eyebrow: "bejegyzés eszközök · 14 / 14",
     title: "Mit tehetsz egy cikkel?",
     body: "Az overlay alján 5 gomb érhető el minden bejegyzésnél:",
     bullets: [
@@ -296,6 +330,8 @@ function TutorialDemo({ type, color, bg, animKey }) {
     composerOpen:    DemoComposerOpen,
     composerFields:  DemoComposerFields,
     composerMarkdown:DemoComposerMarkdown,
+    composerDocx:    DemoComposerDocx,
+    composerSource:  DemoComposerSource,
     composerImage:   DemoComposerImage,
     composerPublish: DemoComposerPublish,
     overlay:         DemoOverlay,
@@ -545,12 +581,40 @@ function DemoComposerFields({ color, bg }) {
 }
 
 function DemoComposerMarkdown({ color, bg }) {
+  const toolbarBtns = [
+    { icon: "heading-1", highlight: true },
+    { icon: "heading-2", highlight: true },
+    { icon: "bold" },
+    { icon: "italic" },
+    { icon: "list" },
+    { icon: "list-ordered" },
+    { icon: "quote" },
+    { icon: "code" },
+    { icon: "link" },
+    { icon: "minus" },
+  ];
   return (
-    <div className="p-2.5">
+    <div className="p-2.5 space-y-2">
+      {/* Toolbar */}
+      <div className="flex items-center gap-0.5 px-2 py-1.5 rounded-full border border-line/50"
+           style={{ background: "#EAE5DC", animation: "tutFadeUp 400ms both" }}>
+        {toolbarBtns.map((btn, i) => (
+          <div key={i}
+               className="size-6 flex items-center justify-center rounded-full"
+               style={{
+                 background: btn.highlight ? color + "20" : "transparent",
+                 color: btn.highlight ? color : "#7A7468",
+                 border: btn.highlight ? `1px solid ${color}44` : "1px solid transparent",
+                 animation: `tutFadeUp 250ms ${i * 40}ms both`,
+               }}>
+            <Icon name={btn.icon} size={10} />
+          </div>
+        ))}
+      </div>
       <div className="grid grid-cols-2 gap-2">
         {/* Editor side */}
         <div className="rounded-lg border border-line/50 overflow-hidden"
-             style={{ animation: "tutFadeUp 400ms 100ms both" }}>
+             style={{ animation: "tutFadeUp 400ms 200ms both" }}>
           <div className="px-2 py-1 border-b border-line/40 text-[8px] font-mono uppercase tracking-widest text-muted"
                style={{ background: "#EAE5DC" }}>
             szerkesztő
@@ -566,7 +630,7 @@ function DemoComposerMarkdown({ color, bg }) {
         </div>
         {/* Preview side */}
         <div className="rounded-lg border border-line/50 overflow-hidden"
-             style={{ animation: "tutFadeUp 400ms 400ms both" }}>
+             style={{ animation: "tutFadeUp 400ms 450ms both" }}>
           <div className="px-2 py-1 border-b border-line/40 text-[8px] font-mono uppercase tracking-widest text-muted"
                style={{ background: "#EAE5DC" }}>
             előnézet
@@ -579,10 +643,89 @@ function DemoComposerMarkdown({ color, bg }) {
           </div>
         </div>
       </div>
-      <div className="mt-2 flex items-center gap-1.5 justify-center" style={{ animation: "tutFadeUp 400ms 700ms both" }}>
+      <div className="flex items-center gap-1.5 justify-center" style={{ animation: "tutFadeUp 400ms 700ms both" }}>
         <Icon name="arrow-left" size={9} className="text-muted" />
         <span className="text-[9px] font-mono text-muted">Markdown → automatikusan formázva</span>
         <Icon name="arrow-right" size={9} className="text-muted" />
+      </div>
+    </div>
+  );
+}
+
+function DemoComposerDocx({ color, bg }) {
+  return (
+    <div className="p-2.5 space-y-2">
+      {/* DOCX gomb */}
+      <div className="flex items-center gap-2" style={{ animation: "tutFadeUp 400ms both" }}>
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-medium text-cream"
+             style={{ background: color, animation: "tutGlow 2s 0.4s ease-in-out infinite" }}>
+          <Icon name="file-text" size={11} stroke={1.8} />
+          DOCX betöltése
+        </div>
+        <span className="text-[9px] font-mono text-muted" style={{ animation: "tutPulse 1.4s ease-in-out infinite" }}>← kattints ide</span>
+      </div>
+      {/* Progress */}
+      <div className="rounded-lg border border-line/50 overflow-hidden"
+           style={{ background: "#FAF6EE", animation: "tutFadeUp 400ms 500ms both" }}>
+        <div className="px-3 py-1.5 flex items-center gap-2 border-b border-line/40"
+             style={{ background: "#EAE5DC" }}>
+          <Icon name="file-text" size={10} className="text-muted" />
+          <span className="font-mono text-[9px] text-muted">projektmenedzsment_dolgozat.docx</span>
+        </div>
+        <div className="p-2.5 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#E4DDC9" }}>
+              <div className="h-full rounded-full" style={{ width: "100%", background: color, animation: "tutDocxBar 1.2s 0.7s cubic-bezier(.2,.7,.2,1) both" }} />
+            </div>
+            <span className="text-[9px] font-mono" style={{ color, animation: "tutFadeUp 300ms 1.9s both" }}>kész</span>
+          </div>
+          <div style={{ animation: "tutFadeUp 400ms 2s both" }}>
+            <div className="text-[8px] font-mono text-muted uppercase tracking-wider mb-0.5">Cím (automatikusan kitöltve)</div>
+            <div className="text-[10px] font-medium text-ink">A projektmenedzsment alapjai</div>
+          </div>
+          <div className="text-[9px] font-mono" style={{ color, animation: "tutFadeUp 400ms 2.2s both" }}>
+            ✓ 342 szó importálva (HTML formátum)
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DemoComposerSource({ color, bg }) {
+  return (
+    <div className="p-2.5 space-y-2">
+      {/* URL input + gomb */}
+      <div className="flex items-center gap-1.5" style={{ animation: "tutFadeUp 400ms both" }}>
+        <div className="flex-1 px-2.5 py-1.5 rounded-lg border border-line/50 flex items-center gap-1"
+             style={{ background: "#FAF6EE" }}>
+          <Icon name="link" size={9} className="text-muted shrink-0" />
+          <span className="font-mono text-[9px] text-ink overflow-hidden whitespace-nowrap inline-block"
+                style={{ animation: "tutType 2s steps(28) 0.3s both", maxWidth: "100%" }}>
+            https://pmbok.org/cikk
+          </span>
+        </div>
+        <div className="inline-flex items-center gap-1 px-2 py-1.5 rounded-full text-[9px] font-medium text-cream shrink-0"
+             style={{ background: "#13110F" }}>
+          <Icon name="link" size={9} /> Lekérés
+        </div>
+      </div>
+      {/* Előnézeti kártya */}
+      <div className="rounded-xl border border-line/50 overflow-hidden"
+           style={{ background: "#FAF6EE", animation: "tutScaleIn 500ms 2s cubic-bezier(.2,.7,.2,1) both" }}>
+        <div className="h-14 w-full object-cover"
+             style={{ background: `linear-gradient(135deg, ${color}33 0%, ${color}88 100%)`,
+               display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Icon name="image" size={18} style={{ color: color + "88" }} />
+        </div>
+        <div className="p-2 space-y-0.5">
+          <div className="font-mono text-[8px] uppercase tracking-wider text-muted">pmbok.org</div>
+          <div className="text-[10px] font-medium text-ink leading-snug">A projektmenedzsment alapjai — PMBOK útmutató</div>
+          <div className="text-[9px] text-ink2 leading-snug line-clamp-1">Részletes összefoglaló a projekt életciklusáról és a kulcsfogalmakról…</div>
+        </div>
+        <div className="border-t border-line/40 py-1 text-center text-[9px] font-mono" style={{ color: "#F26A4B" }}>
+          Forrás eltávolítása
+        </div>
       </div>
     </div>
   );
@@ -726,6 +869,7 @@ function TutorialStyles() {
       @keyframes tutType     { from { width:0; } to { width:100%; } }
       @keyframes tutBlink    { 50% { opacity:0; } }
       @keyframes tutGlow     { 0%,100% { box-shadow:0 0 0 0 transparent; } 50% { box-shadow:0 0 0 3px rgba(107,63,230,0.25); } }
+      @keyframes tutDocxBar  { from { width:0; } to { width:100%; } }
     `}</style>
   );
 }

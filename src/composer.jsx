@@ -2,6 +2,63 @@
 
 const { useState: useStateC, useEffect: useEffectC, useRef: useRefC } = React;
 
+// ─── DOCX → HTML parser (mammoth.js) ─────────────────────────────────────────
+const _TH_STYLE = 'border:1px solid #E4DDC9;padding:8px 12px;text-align:left;background:#F1ECDF;font-weight:600;font-size:13px;white-space:nowrap';
+const _TD_STYLE = 'border:1px solid #E4DDC9;padding:8px 12px;font-size:13px;vertical-align:top';
+const _TABLE_WRAP_OPEN  = '<div style="overflow-x:auto;margin:1.25rem 0"><table style="width:100%;border-collapse:collapse;line-height:1.5">';
+const _TABLE_WRAP_CLOSE = '</table></div>';
+
+async function parseDocxToHtml(file) {
+  const mammoth = window.mammoth;
+  if (!mammoth) throw new Error("mammoth.js nem töltődött be");
+  const arrayBuffer = await file.arrayBuffer();
+  const result = await mammoth.convertToHtml({ arrayBuffer });
+  let html = result.value.trim();
+  if (!html) return { title: "", content: "" };
+
+  html = html
+    // Tables — styled to match site palette
+    .replace(/<table>/gi, _TABLE_WRAP_OPEN)
+    .replace(/<\/table>/gi, _TABLE_WRAP_CLOSE)
+    .replace(/<th(\s[^>]*)?>/gi, (_, a = "") => `<th${a} style="${_TH_STYLE}">`)
+    .replace(/<td(\s[^>]*)?>/gi, (_, a = "") => `<td${a} style="${_TD_STYLE}">`)
+    // Lists — Tailwind Preflight resets list-style; restore it inline
+    .replace(/<ul>/gi, '<ul style="list-style:disc;padding-left:24px;margin:8px 0">')
+    .replace(/<ol>/gi, '<ol style="list-style:decimal;padding-left:24px;margin:8px 0">')
+    .replace(/<li>/gi, '<li style="margin:4px 0">')
+    // Headings
+    .replace(/<h1>/gi, '<h1 style="font-weight:600;font-size:26px;margin:32px 0 10px">')
+    .replace(/<h2>/gi, '<h2 style="font-weight:600;font-size:21px;margin:28px 0 8px">')
+    .replace(/<h3>/gi, '<h3 style="font-weight:600;font-size:18px;margin:20px 0 6px">')
+    // Paragraphs
+    .replace(/<p>/gi, '<p style="margin:0.75em 0;line-height:1.7">')
+    // Links
+    .replace(/<a /gi, '<a style="color:#6B3FE6;text-decoration:underline" ');
+
+  const titleMatch = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  let title = "";
+  let content = html;
+  if (titleMatch) {
+    title = titleMatch[1].replace(/<[^>]*>/g, "").trim();
+    content = html.replace(titleMatch[0], "").trim();
+  }
+  return { title, content };
+}
+
+
+async function fetchOgMeta(url) {
+  try {
+    const res  = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
+    const json = await res.json();
+    if (json.status !== "success") return null;
+    return {
+      title:       json.data.title       || "",
+      description: json.data.description || "",
+      ogImage:     json.data.image?.url  || json.data.screenshot?.url || "",
+    };
+  } catch { return null; }
+}
+
 function Composer({ open, onClose, onPublish, topics, editPost, editPassword }) {
   const [title, setTitle]       = useStateC("");
   const [topicId, setTopicId]   = useStateC(topics[0]?.id || "");
@@ -16,6 +73,12 @@ function Composer({ open, onClose, onPublish, topics, editPost, editPassword }) 
   const [savedAt, setSavedAt]   = useStateC(null);
   const [view, setView]         = useStateC("edit");
   const [uploading, setUploading] = useStateC(false);
+  const [docxParsing, setDocxParsing] = useStateC(false);
+  const [docxMsg, setDocxMsg] = useStateC(null);
+  const [sourceUrl, setSourceUrl]             = useStateC("");
+  const [sourceMeta, setSourceMeta]           = useStateC(null);
+  const [sourceFetching, setSourceFetching]   = useStateC(false);
+  const [sourceFetchErr, setSourceFetchErr]   = useStateC("");
   const taRef = useRefC(null);
 
   const isEdit = !!editPost;
@@ -41,8 +104,15 @@ function Composer({ open, onClose, onPublish, topics, editPost, editPassword }) 
       setExcerpt(editPost.excerpt || "");
       setImageUrl(editPost.image?.label || "");
       setPassword(editPassword || "");
+      setSourceUrl(editPost.source?.url || "");
+      setSourceMeta(editPost.source ? {
+        title: editPost.source.title || "",
+        description: editPost.source.description || "",
+        ogImage: editPost.source.ogImage || "",
+      } : null);
     } else {
       setTitle(""); setContent(""); setTags([]); setExcerpt(""); setImageUrl(""); setPassword("");
+      setSourceUrl(""); setSourceMeta(null); setSourceFetchErr("");
       setTopicId(topics[0]?.id || "");
       setCategory(CATEGORIES[0].slug);
     }
@@ -58,8 +128,29 @@ function Composer({ open, onClose, onPublish, topics, editPost, editPassword }) 
   }, [title, content, topicId, category, tags, imageUrl, excerpt, open]);
 
   const topic = topics.find(t => t.id === topicId);
-  const words = content.trim() ? content.trim().split(/\s+/).length : 0;
+  const plainText = content.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  const words = plainText ? plainText.split(/\s+/).length : 0;
   const readMin = Math.max(1, Math.round(words / 200));
+
+  async function handleDocxFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setDocxParsing(true);
+    setDocxMsg(null);
+    try {
+      const { title: dTitle, content: dHtml } = await parseDocxToHtml(file);
+      if (!dTitle && !dHtml) { setDocxMsg({ ok: false, text: "Nem sikerült szöveget kinyerni a DOCX-ből." }); return; }
+      if (dTitle && !title) setTitle(dTitle);
+      setContent(dHtml);
+      const words = dHtml.replace(/<[^>]*>/g, " ").trim().split(/\s+/).length;
+      setDocxMsg({ ok: true, text: `Kész! ${words} szó importálva (HTML formátum).` });
+    } catch (err) {
+      setDocxMsg({ ok: false, text: "Hiba: " + err.message });
+    } finally {
+      setDocxParsing(false);
+    }
+  }
 
   async function handleImageFile(e) {
     const file = e.target.files?.[0];
@@ -79,6 +170,21 @@ function Composer({ open, onClose, onPublish, topics, editPost, editPassword }) 
   }
   function removeTag(t) { setTags(tags.filter(x => x !== t)); }
 
+  async function handleFetchSource() {
+    const url = sourceUrl.trim();
+    if (!url) return;
+    setSourceFetching(true);
+    setSourceFetchErr("");
+    setSourceMeta(null);
+    const meta = await fetchOgMeta(url);
+    setSourceFetching(false);
+    if (!meta) {
+      setSourceFetchErr("Nem sikerült lekérni az OG adatokat. Ellenőrizd az URL-t.");
+      return;
+    }
+    setSourceMeta(meta);
+  }
+
   async function publish() {
     if (!title.trim()) return;
     if (!password.trim()) { alert("Jelszó megadása kötelező."); return; }
@@ -91,6 +197,12 @@ function Composer({ open, onClose, onPublish, topics, editPost, editPassword }) 
       content,
       excerpt: excerpt || content.split("\n").find(l => l.trim()) || "",
       image: imageUrl ? { kind: "photo", label: imageUrl } : null,
+      source: sourceUrl.trim() ? {
+        url:         sourceUrl.trim(),
+        title:       sourceMeta?.title       || "",
+        description: sourceMeta?.description || "",
+        ogImage:     sourceMeta?.ogImage     || "",
+      } : null,
     };
 
     const sb = window.supabase;
@@ -106,6 +218,7 @@ function Composer({ open, onClose, onPublish, topics, editPost, editPassword }) 
       onPublish(data, false);
     }
     setTitle(""); setContent(""); setTags([]); setExcerpt(""); setImageUrl(""); setPassword("");
+    setSourceUrl(""); setSourceMeta(null); setSourceFetchErr("");
   }
 
   if (!open) return null;
@@ -232,6 +345,69 @@ function Composer({ open, onClose, onPublish, topics, editPost, editPassword }) 
                     className="h-7 px-2 rounded-full bg-cream ring-line text-[12px] outline-none focus:ring-2 focus:ring-ink" />
                 )}
               </div>
+            </SideCard>
+
+            <SideCard title="DOCX importálás" hint="Feltöltés után automatikusan kitölti a cím és tartalom mezőket.">
+              <label className={"btn-press inline-flex items-center gap-2 h-9 px-3 rounded-full ring-line text-[12px] cursor-pointer transition-colors " +
+                (docxParsing ? "bg-creamdark text-muted" : "bg-ink text-cream hover:bg-violetink")}>
+                <Icon name={docxParsing ? "loader" : "file-text"} size={14} />
+                {docxParsing ? "Feldolgozás…" : "DOCX betöltése"}
+                <input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={handleDocxFile} className="sr-only" disabled={docxParsing} />
+              </label>
+              {docxMsg && (
+                <p className={"mt-2 text-[12px] leading-snug " + (docxMsg.ok ? "text-lime-600" : "text-coral")}>
+                  {docxMsg.ok ? "✓ " : "✗ "}{docxMsg.text}
+                </p>
+              )}
+              <p className="mt-2 text-[11px] text-muted leading-snug">
+                A meglévő tartalmat felülírja. A cím csak akkor töltődik ki, ha az üres.
+              </p>
+            </SideCard>
+
+            <SideCard title="Forrás hozzáadása" hint="Linkeld be a témakör forrását — megjelenik a bejegyzés alatt kártyaként.">
+              <div className="flex gap-2">
+                <input
+                  value={sourceUrl}
+                  onChange={e => { setSourceUrl(e.target.value); setSourceFetchErr(""); if (!e.target.value.trim()) setSourceMeta(null); }}
+                  onKeyDown={async e => { if (e.key === "Enter") { e.preventDefault(); await handleFetchSource(); } }}
+                  placeholder="https://…"
+                  className="flex-1 h-9 px-3 rounded-lg bg-cream ring-line text-[13px] outline-none focus:ring-2 focus:ring-ink font-mono"
+                />
+                <button
+                  onClick={handleFetchSource}
+                  disabled={!sourceUrl.trim() || sourceFetching}
+                  className={"btn-press inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-[12px] transition-colors " +
+                    (sourceFetching ? "bg-creamdark text-muted" : "bg-ink text-cream hover:bg-violetink disabled:opacity-40")}>
+                  <Icon name={sourceFetching ? "loader" : "link"} size={13} />
+                  {sourceFetching ? "…" : "Lekérés"}
+                </button>
+              </div>
+              {sourceFetchErr && (
+                <p className="mt-2 text-[12px] text-coral">{sourceFetchErr}</p>
+              )}
+              {sourceMeta && (
+                <div className="mt-3 rounded-xl ring-line overflow-hidden bg-creamdark">
+                  {sourceMeta.ogImage && (
+                    <img src={sourceMeta.ogImage} alt="" className="w-full h-32 object-cover" />
+                  )}
+                  <div className="p-3 flex flex-col gap-1">
+                    <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted">
+                      {(() => { try { return new URL(sourceUrl).hostname.replace("www.", ""); } catch { return sourceUrl; } })()}
+                    </span>
+                    {sourceMeta.title && (
+                      <span className="text-[13px] font-medium leading-snug">{sourceMeta.title}</span>
+                    )}
+                    {sourceMeta.description && (
+                      <span className="text-[11px] text-ink2 leading-snug line-clamp-2">{sourceMeta.description}</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => { setSourceUrl(""); setSourceMeta(null); setSourceFetchErr(""); }}
+                    className="w-full py-1.5 text-[11px] text-coral hover:bg-coral/10 transition-colors border-t border-line">
+                    Forrás eltávolítása
+                  </button>
+                </div>
+              )}
             </SideCard>
 
             <SideCard title="Kiemelt kép" hint="Tölts fel fájlt, vagy add meg a kép URL-jét.">
@@ -396,24 +572,84 @@ function ComposerPreview({ title, content, topic, category, tags, imageUrl }) {
 }
 
 function renderMarkdown(src) {
-  const esc = (s) => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  let s = esc(src);
-  s = s.replace(/^### (.*)$/gm, '<h3>$1</h3>')
-       .replace(/^## (.*)$/gm,  '<h2>$1</h2>')
-       .replace(/^# (.*)$/gm,   '<h1>$1</h1>')
-       .replace(/^> (.*)$/gm,   '<blockquote>$1</blockquote>')
-       .replace(/^---$/gm,      '<hr/>')
-       .replace(/`([^`]+)`/g,   '<code>$1</code>')
-       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-       .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-  s = s.replace(/(?:^|\n)((?:- .*(?:\n|$))+)/g, (_, block) =>
-    `\n<ul>${block.trim().split("\n").map(l => `<li>${l.replace(/^- /, "")}</li>`).join("")}</ul>`);
-  s = s.replace(/(?:^|\n)((?:\d+\. .*(?:\n|$))+)/g, (_, block) =>
-    `\n<ol>${block.trim().split("\n").map(l => `<li>${l.replace(/^\d+\. /, "")}</li>`).join("")}</ol>`);
-  s = s.split(/\n{2,}/).map(p =>
-    /^<(h\d|ul|ol|blockquote|hr|pre)/.test(p) ? p : `<p>${p.replace(/\n/g, "<br/>")}</p>`).join("\n");
-  return s;
+  if (!src) return "";
+  const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const inline = raw => esc(raw)
+    .replace(/!\[\]\(([^)]+)\)/g, '<img src="$1" alt="" style="max-width:100%;border-radius:6px;margin:4px 0;display:block">')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#6B3FE6;text-decoration:underline">$1</a>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g,     '<em>$1</em>')
+    .replace(/`([^`]+)`/g,       '<code style="font-family:JetBrains Mono,monospace;font-size:13px;background:#F1ECDF;padding:1px 5px;border-radius:4px">$1</code>');
+  const parseTblRow = line => line.split('|').slice(1,-1).map(c => c.trim());
+  const isTblSep   = line => /^\|[\s\-:]+\|/.test(line.trim());
+  const TH = 'border:1px solid #E4DDC9;padding:8px 12px;text-align:left;background:#F1ECDF;font-weight:600;font-size:13px;white-space:nowrap';
+  const TD = 'border:1px solid #E4DDC9;padding:8px 12px;font-size:13px;vertical-align:top';
+
+  const out = [];
+  for (const raw of src.split(/\n{2,}/)) {
+    const block = raw.trim();
+    if (!block) continue;
+    const lines = block.split('\n');
+    const first = lines[0].trim();
+
+    // Raw HTML passthrough — any tag (covers mammoth output, avoids double-escaping entities)
+    if (/^<[a-zA-Z]/.test(first)) {
+      out.push(block);
+      continue;
+    }
+
+    // Heading
+    const hm = first.match(/^(#{1,3})\s+(.*)/);
+    if (hm) {
+      const [sz,mg] = [['26px','21px','18px'],['32px 0 10px','28px 0 8px','20px 0 6px']][0];
+      const n = hm[1].length;
+      out.push(`<h${n} style="font-weight:600;font-size:${['26px','21px','18px'][n-1]};margin:${['32px 0 10px','28px 0 8px','20px 0 6px'][n-1]}">${inline(hm[2])}</h${n}>`);
+      continue;
+    }
+    // HR
+    if (/^---+$/.test(first)) { out.push('<hr style="border:none;border-top:1px solid #E4DDC9;margin:24px 0"/>'); continue; }
+    // Blockquote
+    if (lines.every(l => /^>/.test(l.trim()))) {
+      out.push(`<blockquote style="padding-left:16px;border-left:2px solid #6B3FE6;font-style:italic;color:#2A2620;margin:12px 0">${
+        lines.map(l => inline(l.trim().replace(/^>\s?/,''))).join('<br/>')}</blockquote>`);
+      continue;
+    }
+    // Markdown table: | ... | / | --- | / | ... |
+    if (lines.length >= 2 && /^\|/.test(first) && isTblSep(lines[1]||'')) {
+      const headers = parseTblRow(lines[0]);
+      const bodyRows = lines.slice(2).filter(l => /^\|/.test(l.trim()));
+      const thead = `<thead><tr>${headers.map(h=>`<th style="${TH}">${inline(h)}</th>`).join('')}</tr></thead>`;
+      const tbody = bodyRows.length
+        ? `<tbody>${bodyRows.map(r => {
+            const cells = parseTblRow(r);
+            while (cells.length < headers.length) cells.push('');
+            return `<tr>${cells.slice(0,headers.length).map(c=>`<td style="${TD}">${inline(c)}</td>`).join('')}</tr>`;
+          }).join('')}</tbody>`
+        : '';
+      out.push(`<div style="overflow-x:auto;margin:1.25rem 0"><table style="width:100%;border-collapse:collapse;line-height:1.5">${thead}${tbody}</table></div>`);
+      continue;
+    }
+    // Standalone image
+    if (lines.length === 1 && /^!\[\]\([^)]+\)$/.test(first)) {
+      out.push(`<img src="${first.match(/!\[\]\(([^)]+)\)/)[1]}" alt="kép" style="max-width:100%;border-radius:8px;margin:1rem 0;display:block">`);
+      continue;
+    }
+    // Unordered list
+    if (lines.every(l => /^[-•]\s/.test(l.trim()))) {
+      out.push(`<ul style="list-style:disc;padding-left:24px;margin:8px 0">${
+        lines.map(l=>`<li style="margin:4px 0">${inline(l.trim().replace(/^[-•]\s+/,''))}</li>`).join('')}</ul>`);
+      continue;
+    }
+    // Ordered list
+    if (lines.every(l => /^\d+[.)]\s/.test(l.trim()))) {
+      out.push(`<ol style="list-style:decimal;padding-left:24px;margin:8px 0">${
+        lines.map(l=>`<li style="margin:4px 0">${inline(l.trim().replace(/^\d+[.)]\s+/,''))}</li>`).join('')}</ol>`);
+      continue;
+    }
+    // Paragraph
+    out.push(`<p style="margin:0.75em 0;line-height:1.7">${lines.map(l=>inline(l)).join('<br/>')}</p>`);
+  }
+  return out.join('\n');
 }
 
 function SideCard({ title, hint, children }) {

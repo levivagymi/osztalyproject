@@ -25,7 +25,7 @@ function Icon({ name, size = 18, stroke = 1.6, className = "", style = {} }) {
 }
 
 function toPascal(s) {
-  return s.replace(/(^|-)([a-z])/g, (_, _d, c) => c.toUpperCase());
+  return s.replace(/(^|-)(\w)/g, (_, _d, c) => c.toUpperCase());
 }
 
 Object.assign(window, { Icon });
