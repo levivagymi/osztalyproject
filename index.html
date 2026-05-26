@@ -92,7 +92,7 @@ tailwind.config = {
 <script>
   // Static site (no framework): a Vercel env-eket egy /api/env endpointból töltjük.
   // Local dev: fallback config.js (window.SUPABASE_CONFIG).
-  (async () => {
+  window._configReady = (async () => {
     try {
       if (!window.SUPABASE_CONFIG) {
         const resp = await fetch('/api/env');
@@ -104,7 +104,6 @@ tailwind.config = {
         }
       }
     } catch (e) {}
-
     // if still missing, config.js should fill it (local dev)
   })();
 </script>
