@@ -564,31 +564,48 @@ function CommentsModal({ postId, onClose }) {
   );
 }
 
-// ── Forrás link-kártya (OG preview) ──────────────────────────────────
+// ── Forrás link-kártya (OG preview, dinamikus lekéréssel) ────────────
 function SourceCard({ source }) {
-  const domain = (() => {
-    try { return new URL(source.url).hostname.replace("www.", ""); }
-    catch { return source.url; }
-  })();
+  const [meta, setMeta]       = useStateF(null);
+  const [imgLoading, setImgL] = useStateF(!source.ogImage);
+
+  useEffectF(() => {
+    if (source.ogImage || !source.url) { setImgL(false); return; }
+    fetch(`https://api.microlink.io/?url=${encodeURIComponent(source.url)}`)
+      .then(r => r.json())
+      .then(json => {
+        if (json.status === "success") setMeta({
+          title:       json.data.title       || "",
+          description: json.data.description || "",
+          ogImage:     json.data.image?.url  || json.data.screenshot?.url || "",
+        });
+      })
+      .catch(() => {})
+      .finally(() => setImgL(false));
+  }, [source.url, source.ogImage]);
+
+  const domain      = (() => { try { return new URL(source.url).hostname.replace("www.", ""); } catch { return source.url; } })();
+  const ogImage     = source.ogImage || meta?.ogImage     || "";
+  const title       = source.title   || meta?.title       || "";
+  const description = source.description || meta?.description || "";
+
   return (
     <a href={source.url} target="_blank" rel="noopener noreferrer"
       className="group flex gap-4 rounded-xl ring-line bg-creamdark hover:bg-cream transition-colors overflow-hidden no-underline">
-      {source.ogImage && (
-        <img
-          src={source.ogImage}
-          alt=""
-          className="flex-shrink-0 w-28 h-20 object-cover"
-        />
-      )}
-      <div className="min-w-0 flex flex-col justify-center gap-1 py-3 pr-4" style={{ paddingLeft: source.ogImage ? 0 : "1rem" }}>
+      {imgLoading ? (
+        <div className="flex-shrink-0 w-28 h-20 bg-line/40 animate-pulse" />
+      ) : ogImage ? (
+        <img src={ogImage} alt="" className="flex-shrink-0 w-28 h-20 object-cover" />
+      ) : null}
+      <div className="min-w-0 flex flex-col justify-center gap-1 py-3 pr-4" style={{ paddingLeft: (imgLoading || ogImage) ? 0 : "1rem" }}>
         <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted">{domain}</span>
-        {source.title && (
+        {title && (
           <span className="text-[14px] font-medium leading-snug line-clamp-2 text-ink group-hover:text-violetink transition-colors">
-            {source.title}
+            {title}
           </span>
         )}
-        {source.description && (
-          <span className="text-[12px] text-ink2 line-clamp-2 leading-snug">{source.description}</span>
+        {description && (
+          <span className="text-[12px] text-ink2 line-clamp-2 leading-snug">{description}</span>
         )}
       </div>
     </a>

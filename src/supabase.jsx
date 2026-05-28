@@ -89,15 +89,20 @@ const supabase = {
   // Bejegyzések lekérése (jelszó nélkül)
   async listPosts({ category = null, topicId = null, search = "" } = {}) {
     const _sb = await requireSupabaseClient();
-    let query = _sb
-      .from("posts")
-      .select(SAFE_COLS)
-      .order("created_at", { ascending: false });
 
-    if (category) query = query.eq("category", category);
-    if (topicId)  query = query.eq("team_id", topicId);
+    const buildQuery = (cols) => {
+      let q = _sb.from("posts").select(cols).order("created_at", { ascending: false });
+      if (category) q = q.eq("category", category);
+      if (topicId)  q = q.eq("team_id", topicId);
+      return q;
+    };
 
-    const { data, error } = await query;
+    let { data, error } = await buildQuery(SAFE_COLS);
+    // Ha a sources oszlop még nem létezik (migration nem futott), fallback régi oszlopokra
+    if (error && error.message?.includes("sources")) {
+      const SAFE_COLS_LEGACY = SAFE_COLS.replace(",sources", "");
+      ({ data, error } = await buildQuery(SAFE_COLS_LEGACY));
+    }
     if (error) return { data: [], error };
 
     let rows = (data || []).map(toFrontend);
