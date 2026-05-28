@@ -361,10 +361,14 @@ function PostOverlay({ post, topic, onClose, savedPostIds, onToggleSave, onEdit,
             )}
           </div>
 
-          {post.source?.url && (
+          {post.sources?.length > 0 && (
             <div className="mt-10">
-              <h4 className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted mb-3">Forrás</h4>
-              <SourceCard source={post.source} />
+              <h4 className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted mb-3">
+                {post.sources.length === 1 ? "Forrás" : `Források (${post.sources.length})`}
+              </h4>
+              <div className="space-y-3">
+                {post.sources.map((src, i) => src?.url ? <SourceCard key={i} source={src} /> : null)}
+              </div>
             </div>
           )}
 

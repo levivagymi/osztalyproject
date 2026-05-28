@@ -37,40 +37,46 @@ async function requireSupabaseClient() {
 
 
 // A jelszó mezőt nem adjuk vissza normál lekérdezéseknél
-const SAFE_COLS = "id,title,excerpt,content,team_id,category,tags,image_url,pinned,read_min,author,created_at,updated_at,source_url,source_title,source_description,source_og_image";
+const SAFE_COLS = "id,title,excerpt,content,team_id,category,tags,image_url,pinned,read_min,author,created_at,updated_at,source_url,source_title,source_description,source_og_image,sources";
 
 // DB → frontend mezőátalakítás
 function toFrontend(row) {
   if (!row) return null;
+  // Prefer new `sources` JSONB array; fall back to legacy single-source columns
+  const sourcesArr = Array.isArray(row.sources) && row.sources.length > 0
+    ? row.sources
+    : row.source_url
+      ? [{ url: row.source_url, title: row.source_title || "", description: row.source_description || "", ogImage: row.source_og_image || "" }]
+      : [];
   return {
     ...row,
-    read:  row.read_min ?? 3,
-    image: row.image_url ? { kind: "photo", label: row.image_url } : null,
-    source: row.source_url ? {
-      url:         row.source_url,
-      title:       row.source_title       || null,
-      description: row.source_description || null,
-      ogImage:     row.source_og_image    || null,
-    } : null,
+    read:    row.read_min ?? 3,
+    image:   row.image_url ? { kind: "photo", label: row.image_url } : null,
+    sources: sourcesArr,
+    // keep legacy field for any code that still reads post.source
+    source:  sourcesArr[0] || null,
   };
 }
 
 // Frontend → DB mezőátalakítás (jelszó nélkül)
 function toDb(payload) {
   const wordCount = (payload.content || "").trim().split(/\s+/).filter(Boolean).length;
+  const sources   = Array.isArray(payload.sources) ? payload.sources : [];
   return {
-    title:              payload.title?.trim(),
-    team_id:            payload.team_id,
-    category:           payload.category,
-    tags:               payload.tags   || [],
-    content:            payload.content || "",
-    excerpt:            payload.excerpt || "",
-    image_url:          payload.image?.label || null,
-    read_min:           Math.max(1, Math.round(wordCount / 200)),
-    source_url:         payload.source?.url         || null,
-    source_title:       payload.source?.title       || null,
-    source_description: payload.source?.description || null,
-    source_og_image:    payload.source?.ogImage     || null,
+    title:    payload.title?.trim(),
+    team_id:  payload.team_id,
+    category: payload.category,
+    tags:     payload.tags   || [],
+    content:  payload.content || "",
+    excerpt:  payload.excerpt || "",
+    image_url: payload.image?.label || null,
+    read_min:  Math.max(1, Math.round(wordCount / 200)),
+    sources,
+    // keep legacy columns in sync with first source for old queries
+    source_url:         sources[0]?.url         || null,
+    source_title:       sources[0]?.title       || null,
+    source_description: sources[0]?.description || null,
+    source_og_image:    sources[0]?.ogImage     || null,
   };
 }
 

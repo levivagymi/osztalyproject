@@ -22,7 +22,19 @@ const TOPICS = [
       { text: "Szerkezet, design meghatározása" }
     ],
     desc: "A weboldal vizuális megjelenésének, szerkezetének és felhasználói élményének megtervezése és megvalósítása.",
-    software: [], sources: []
+    software: [],
+    sources: [
+      { label: "Interaction Design Foundation — What is Design?", url: "https://www.interaction-design.org/literature/topics/design" },
+      { label: "W3Schools — What is Web Design?", url: "https://www.w3schools.com/whatis/whatis_webdesign.asp" },
+      { label: "MDN Web Docs — Structuring content with HTML", url: "https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content" },
+      { label: "Nielsen Norman Group — The Definition of User Experience (UX)", url: "https://www.nngroup.com/articles/definition-user-experience/" },
+      { label: "Interaction Design Foundation — UI Design", url: "https://www.interaction-design.org/literature/topics/ui-design" },
+      { label: "Balsamiq — What are Wireframes?", url: "https://balsamiq.com/learn/articles/what-are-wireframes/" },
+      { label: "Canva — Design Elements and Principles", url: "https://www.canva.com/learn/design-elements-principles/" },
+      { label: "MDN Web Docs — Responsive Design", url: "https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/CSS_layout/Responsive_Design" },
+      { label: "Adobe Color — Color Wheel & Color Schemes", url: "https://color.adobe.com/create/color-wheel" },
+      { label: "Google Fonts Knowledge — Typography", url: "https://fonts.google.com/knowledge" },
+    ]
   },
   {
     id: "t02", number: "02",

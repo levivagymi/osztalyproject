@@ -75,10 +75,10 @@ function Composer({ open, onClose, onPublish, topics, editPost, editPassword }) 
   const [uploading, setUploading] = useStateC(false);
   const [docxParsing, setDocxParsing] = useStateC(false);
   const [docxMsg, setDocxMsg] = useStateC(null);
-  const [sourceUrl, setSourceUrl]             = useStateC("");
-  const [sourceMeta, setSourceMeta]           = useStateC(null);
-  const [sourceFetching, setSourceFetching]   = useStateC(false);
-  const [sourceFetchErr, setSourceFetchErr]   = useStateC("");
+  const [sources, setSources]               = useStateC([]);      // [{ url, title, description, ogImage }]
+  const [sourceInput, setSourceInput]       = useStateC("");
+  const [sourceFetching, setSourceFetching] = useStateC(false);
+  const [sourceFetchErr, setSourceFetchErr] = useStateC("");
   const taRef = useRefC(null);
 
   const isEdit = !!editPost;
@@ -104,15 +104,11 @@ function Composer({ open, onClose, onPublish, topics, editPost, editPassword }) 
       setExcerpt(editPost.excerpt || "");
       setImageUrl(editPost.image?.label || "");
       setPassword(editPassword || "");
-      setSourceUrl(editPost.source?.url || "");
-      setSourceMeta(editPost.source ? {
-        title: editPost.source.title || "",
-        description: editPost.source.description || "",
-        ogImage: editPost.source.ogImage || "",
-      } : null);
+      setSources(Array.isArray(editPost.sources) ? editPost.sources : editPost.source ? [editPost.source] : []);
+      setSourceInput("");
     } else {
       setTitle(""); setContent(""); setTags([]); setExcerpt(""); setImageUrl(""); setPassword("");
-      setSourceUrl(""); setSourceMeta(null); setSourceFetchErr("");
+      setSources([]); setSourceInput(""); setSourceFetchErr("");
       setTopicId(topics[0]?.id || "");
       setCategory(CATEGORIES[0].slug);
     }
@@ -170,20 +166,19 @@ function Composer({ open, onClose, onPublish, topics, editPost, editPassword }) 
   }
   function removeTag(t) { setTags(tags.filter(x => x !== t)); }
 
-  async function handleFetchSource() {
-    const url = sourceUrl.trim();
+  async function handleAddSource() {
+    const url = sourceInput.trim();
     if (!url) return;
+    if (sources.some(s => s.url === url)) { setSourceFetchErr("Ez a forrás már hozzá van adva."); return; }
     setSourceFetching(true);
     setSourceFetchErr("");
-    setSourceMeta(null);
     const meta = await fetchOgMeta(url);
     setSourceFetching(false);
-    if (!meta) {
-      setSourceFetchErr("Nem sikerült lekérni az OG adatokat. Ellenőrizd az URL-t.");
-      return;
-    }
-    setSourceMeta(meta);
+    setSources(prev => [...prev, { url, title: meta?.title || "", description: meta?.description || "", ogImage: meta?.ogImage || "" }]);
+    setSourceInput("");
   }
+
+  function removeSource(i) { setSources(prev => prev.filter((_, idx) => idx !== i)); }
 
   async function publish() {
     if (!title.trim()) return;
@@ -197,12 +192,7 @@ function Composer({ open, onClose, onPublish, topics, editPost, editPassword }) 
       content,
       excerpt: excerpt || content.split("\n").find(l => l.trim()) || "",
       image: imageUrl ? { kind: "photo", label: imageUrl } : null,
-      source: sourceUrl.trim() ? {
-        url:         sourceUrl.trim(),
-        title:       sourceMeta?.title       || "",
-        description: sourceMeta?.description || "",
-        ogImage:     sourceMeta?.ogImage     || "",
-      } : null,
+      sources,
     };
 
     const sb = window.supabase;
@@ -218,7 +208,7 @@ function Composer({ open, onClose, onPublish, topics, editPost, editPassword }) 
       onPublish(data, false);
     }
     setTitle(""); setContent(""); setTags([]); setExcerpt(""); setImageUrl(""); setPassword("");
-    setSourceUrl(""); setSourceMeta(null); setSourceFetchErr("");
+    setSources([]); setSourceInput(""); setSourceFetchErr("");
   }
 
   if (!open) return null;
@@ -364,48 +354,52 @@ function Composer({ open, onClose, onPublish, topics, editPost, editPassword }) 
               </p>
             </SideCard>
 
-            <SideCard title="Forrás hozzáadása" hint="Linkeld be a témakör forrását — megjelenik a bejegyzés alatt kártyaként.">
+            <SideCard title="Források" hint="Adj hozzá több forrást is — mindegyik kártyaként jelenik meg a bejegyzés alatt.">
               <div className="flex gap-2">
                 <input
-                  value={sourceUrl}
-                  onChange={e => { setSourceUrl(e.target.value); setSourceFetchErr(""); if (!e.target.value.trim()) setSourceMeta(null); }}
-                  onKeyDown={async e => { if (e.key === "Enter") { e.preventDefault(); await handleFetchSource(); } }}
+                  value={sourceInput}
+                  onChange={e => { setSourceInput(e.target.value); setSourceFetchErr(""); }}
+                  onKeyDown={async e => { if (e.key === "Enter") { e.preventDefault(); await handleAddSource(); } }}
                   placeholder="https://…"
                   className="flex-1 h-9 px-3 rounded-lg bg-cream ring-line text-[13px] outline-none focus:ring-2 focus:ring-ink font-mono"
                 />
                 <button
-                  onClick={handleFetchSource}
-                  disabled={!sourceUrl.trim() || sourceFetching}
+                  onClick={handleAddSource}
+                  disabled={!sourceInput.trim() || sourceFetching}
                   className={"btn-press inline-flex items-center gap-1.5 h-9 px-3 rounded-full text-[12px] transition-colors " +
                     (sourceFetching ? "bg-creamdark text-muted" : "bg-ink text-cream hover:bg-violetink disabled:opacity-40")}>
-                  <Icon name={sourceFetching ? "loader" : "link"} size={13} />
-                  {sourceFetching ? "…" : "Lekérés"}
+                  <Icon name={sourceFetching ? "loader" : "plus"} size={13} />
+                  {sourceFetching ? "…" : "Hozzáad"}
                 </button>
               </div>
               {sourceFetchErr && (
                 <p className="mt-2 text-[12px] text-coral">{sourceFetchErr}</p>
               )}
-              {sourceMeta && (
-                <div className="mt-3 rounded-xl ring-line overflow-hidden bg-creamdark">
-                  {sourceMeta.ogImage && (
-                    <img src={sourceMeta.ogImage} alt="" className="w-full h-32 object-cover" />
-                  )}
-                  <div className="p-3 flex flex-col gap-1">
-                    <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted">
-                      {(() => { try { return new URL(sourceUrl).hostname.replace("www.", ""); } catch { return sourceUrl; } })()}
-                    </span>
-                    {sourceMeta.title && (
-                      <span className="text-[13px] font-medium leading-snug">{sourceMeta.title}</span>
-                    )}
-                    {sourceMeta.description && (
-                      <span className="text-[11px] text-ink2 leading-snug line-clamp-2">{sourceMeta.description}</span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => { setSourceUrl(""); setSourceMeta(null); setSourceFetchErr(""); }}
-                    className="w-full py-1.5 text-[11px] text-coral hover:bg-coral/10 transition-colors border-t border-line">
-                    Forrás eltávolítása
-                  </button>
+              {sources.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {sources.map((s, i) => {
+                    const domain = (() => { try { return new URL(s.url).hostname.replace("www.", ""); } catch { return s.url; } })();
+                    return (
+                      <div key={i} className="rounded-xl ring-line overflow-hidden bg-creamdark">
+                        {s.ogImage && (
+                          <img src={s.ogImage} alt="" className="w-full h-28 object-cover" />
+                        )}
+                        <div className="p-3 flex items-start gap-2">
+                          <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                            <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted">{domain}</span>
+                            <span className="text-[13px] font-medium leading-snug line-clamp-2">{s.title || s.url}</span>
+                            {s.description && (
+                              <span className="text-[11px] text-ink2 leading-snug line-clamp-2">{s.description}</span>
+                            )}
+                          </div>
+                          <button onClick={() => removeSource(i)}
+                            className="shrink-0 size-6 grid place-items-center rounded-full hover:bg-coral/10 text-coral mt-0.5">
+                            <Icon name="x" size={12} stroke={2.2} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </SideCard>

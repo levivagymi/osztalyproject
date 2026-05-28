@@ -132,6 +132,11 @@ alter table public.posts add column if not exists source_title       text;
 alter table public.posts add column if not exists source_description text;
 alter table public.posts add column if not exists source_og_image    text;
 
+-- ── MIGRATION: több forrás támogatása ───────────────────────────────
+-- Tömbös JSONB mező: [{ url, title, description, ogImage }, ...]
+-- A régi single-source oszlopok visszafelé kompatibilitásból megmaradnak.
+alter table public.posts add column if not exists sources jsonb not null default '[]'::jsonb;
+
 
 -- ── POST COMMENTS ────────────────────────────────────────────────────
 create table if not exists public.post_comments (

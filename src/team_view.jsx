@@ -120,14 +120,12 @@ function TeamView({ team: topic, posts, allTeams: allTopics, onBack, onOpenPost 
                 <p className="mt-2 text-[13px] text-muted">A csapat forrásait ide töltjük fel.</p>
               </div>
             ) : (
-              <ul className="space-y-2">
-                {topic.sources.map((src, i) => (
-                  <li key={i} className="flex items-start gap-3 py-2 border-b border-line/50">
-                    <Icon name="link" size={13} className="text-muted mt-0.5 shrink-0" />
-                    <span className="text-[15px]">{src}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="grid sm:grid-cols-2 gap-4">
+                {topic.sources.map((src, i) => {
+                  const item = typeof src === "object" ? src : { label: src, url: null };
+                  return <TeamSourceCard key={i} src={item} />;
+                })}
+              </div>
             )}
           </section>
         </div>
@@ -174,6 +172,66 @@ function TeamView({ team: topic, posts, allTeams: allTopics, onBack, onOpenPost 
         </aside>
       </div>
     </div>
+  );
+}
+
+function TeamSourceCard({ src }) {
+  const [meta, setMeta]       = React.useState(null);
+  const [loading, setLoading] = React.useState(!!src.url);
+
+  React.useEffect(() => {
+    if (!src.url) return;
+    fetch(`https://api.microlink.io/?url=${encodeURIComponent(src.url)}`)
+      .then(r => r.json())
+      .then(json => {
+        if (json.status === "success") {
+          setMeta({
+            title:       json.data.title       || "",
+            description: json.data.description || "",
+            ogImage:     json.data.image?.url  || json.data.screenshot?.url || "",
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [src.url]);
+
+  const domain = (() => {
+    try { return new URL(src.url).hostname.replace("www.", ""); } catch { return ""; }
+  })();
+  const title       = meta?.title       || src.label;
+  const description = meta?.description || "";
+  const ogImage     = meta?.ogImage     || "";
+
+  if (!src.url) {
+    return (
+      <div className="rounded-xl ring-line bg-creamdark p-4 flex items-center gap-3">
+        <Icon name="link" size={14} className="text-muted shrink-0" />
+        <span className="text-[14px]">{src.label}</span>
+      </div>
+    );
+  }
+
+  return (
+    <a href={src.url} target="_blank" rel="noopener noreferrer"
+      className="group rounded-xl ring-line bg-creamdark hover:bg-cream transition-colors overflow-hidden flex flex-col no-underline">
+      {loading ? (
+        <div className="w-full h-36 bg-line/40 animate-pulse" />
+      ) : ogImage ? (
+        <img src={ogImage} alt="" className="w-full h-36 object-cover" />
+      ) : null}
+      <div className="p-4 flex flex-col gap-1">
+        {domain && (
+          <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted">{domain}</span>
+        )}
+        <span className="text-[14px] font-medium leading-snug line-clamp-2 text-ink group-hover:text-violetink transition-colors">
+          {loading ? src.label : title}
+        </span>
+        {!loading && description && (
+          <span className="text-[12px] text-ink2 line-clamp-2 leading-snug mt-0.5">{description}</span>
+        )}
+      </div>
+    </a>
   );
 }
 
